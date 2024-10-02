@@ -12,6 +12,7 @@ add_library(compiler
     ir/Instruction/BinaryFloatingRelationalOperators.cpp
     ir/Instruction/BinaryIntegerArithmeticOperators.cpp
     ir/Instruction/BinaryIntegerRelationalOperators.cpp
+    ir/Instruction/BitCast.cpp
     ir/Instruction/Call.cpp
     ir/Instruction/FloatingCastingOperators.cpp
     ir/Instruction/FloatingToIntegerCastingOperators.cpp
