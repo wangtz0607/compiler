@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include "common/OpException.h"
@@ -34,7 +35,7 @@ template <typename Op, typename ToConst, typename ToTy>
 class ConstantVisitorImpl final : public ConstantVisitor {
 public:
     std::unique_ptr<Constant> takeResult() {
-        return std::move(result_);
+        return std::move(result_.value());
     }
 
     void visitI1Constant(const I1Constant &value) override {
@@ -58,14 +59,14 @@ public:
     }
 
 private:
-    std::unique_ptr<Constant> result_;
+    std::optional<std::unique_ptr<Constant>> result_;
 
     template <typename FromConst>
     void visit(const FromConst &value) {
         try {
-            result_ = std::make_unique<ToConst>(Op()(value.value()));
+            result_.emplace(std::make_unique<ToConst>(Op()(value.value())));
         } catch (const OpException &) {
-            result_ = std::make_unique<PoisonValue>(std::make_unique<ToTy>());
+            result_.emplace(std::make_unique<PoisonValue>(std::make_unique<ToTy>()));
         }
     }
 };
@@ -76,7 +77,7 @@ public:
     explicit TypeVisitorImpl(const Constant &value) : value_(value) {}
 
     std::unique_ptr<Constant> takeResult() {
-        return std::move(result_);
+        return std::move(result_.value());
     }
 
     void visitI1(const I1 &) override {
@@ -101,13 +102,13 @@ public:
 
 private:
     const Constant &value_;
-    std::unique_ptr<Constant> result_;
+    std::optional<std::unique_ptr<Constant>> result_;
 
     template <typename To, typename ToConst, typename ToTy>
     void visit() {
         ConstantVisitorImpl<Op<To>, ToConst, ToTy> visitor;
         value_.accept(visitor);
-        result_ = visitor.takeResult();
+        result_.emplace(visitor.takeResult());
     }
 };
 
