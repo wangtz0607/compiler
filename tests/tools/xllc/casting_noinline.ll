@@ -57,6 +57,12 @@ define i32 @fptoui(double %0) noinline {
   ret i32 %2
 }
 
+define i64 @bitcast(double %0) noinline {
+1:
+  %2 = bitcast double %0 to i64
+  ret i64 %2
+}
+
 define i32 @main() {
 0:
   %1 = call i32 @trunc(i64 1311768467139281697)
@@ -81,5 +87,7 @@ define i32 @main() {
   %20 = call i32 @printf(ptr @__format1, i32 %19)
   %21 = call i32 @fptoui(double 0x40091eb851eb851f)
   %22 = call i32 @printf(ptr @__format1, i32 %21)
+  %23 = call i64 @bitcast(double 0x40091eb851eb851f)
+  %24 = call i32 @printf(ptr @__format2, i64 %23)
   ret i32 0
 }
