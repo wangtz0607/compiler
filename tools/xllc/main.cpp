@@ -144,17 +144,24 @@ int main(int argc, char *argv[]) {
     }
 
     ir::Module M;
+    bool hasError = false;
+    const char *location;
+    std::string message;
     try {
         M = ir::parseModule(reinterpret_cast<const char *>(addr));
     } catch (const ir::LexException &e) {
-        size_t line, column;
-        computeLineColumn(reinterpret_cast<const char *>(addr), e.location(), line, column);
-        fprintf(stderr, "%s:%zu:%zu: error: %s\n", options.inputFile, line, column, e.message().c_str());
-        exit(1);
+        hasError = true;
+        location = e.location();
+        message = e.message();
     } catch (const ir::ParseException &e) {
+        hasError = true;
+        location = e.location()->location;
+        message = e.message();
+    }
+    if (hasError) {
         size_t line, column;
-        computeLineColumn(reinterpret_cast<const char *>(addr), e.location()->location, line, column);
-        fprintf(stderr, "%s:%zu:%zu: error: %s\n", options.inputFile, line, column, e.message().c_str());
+        computeLineColumn(reinterpret_cast<const char *>(addr), location, line, column);
+        fprintf(stderr, "%s:%zu:%zu: error: %s\n", options.inputFile, line, column, message.c_str());
         exit(1);
     }
 
