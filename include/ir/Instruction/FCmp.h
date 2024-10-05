@@ -73,4 +73,3 @@ inline std::string FCmp::format() const {
 }
 
 } // namespace ir
-

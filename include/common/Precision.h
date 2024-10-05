@@ -4,4 +4,3 @@ enum class Precision {
     kSingle,
     kDouble,
 };
-
