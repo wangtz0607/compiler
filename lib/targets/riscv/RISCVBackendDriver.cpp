@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include "codegen/register_allocator/LinearScanAllocator.h"
+#include "codegen/register_allocator/NaiveAllocator.h"
 #include "codegen/RegisterAllocator.h"
 #include "common/ExtensionMode.h"
 #include "common/Precision.h"
@@ -74,63 +76,66 @@ mc::Program RISCVBackendDriver::run(const ir::Module &IM) {
                     physRegs.erase(sp());
                     physRegs.erase(fp());
 
-                    registerAllocator_->allocate(
-                        F,
-                        8,
-                        virtRegs,
-                        physRegs,
-                        [endSlot = &F.stackFrame().back()](PhysicalRegister *physReg, StackSlot *slot, const BasicBlockBuilder &builder) {
-                            std::shared_ptr<Register> dst = share(*physReg);
-                            MemoryOperand src(share(*fp()), std::make_unique<StackRelativeOffsetImmediate>(endSlot, slot));
+                    auto load = [endSlot = &F.stackFrame().back()](PhysicalRegister *physReg, StackSlot *slot, const BasicBlockBuilder &builder) {
+                        std::shared_ptr<Register> dst = share(*physReg);
+                        MemoryOperand src(share(*fp()), std::make_unique<StackRelativeOffsetImmediate>(endSlot, slot));
 
-                            switch (physReg->kind()) {
-                                case RegisterKind::kInteger: {
-                                    int width = slot->size();
-                                    ExtensionMode extensionMode = width == 8 ? ExtensionMode::kNo : ExtensionMode::kSign;
-                                    builder.add(std::make_unique<Load>(width, std::move(dst), std::move(src), extensionMode));
-                                    break;
-                                }
-
-                                case RegisterKind::kFloating: {
-                                    Precision precision;
-                                    switch (slot->size()) {
-                                        case 4: precision = Precision::kSingle; break;
-                                        case 8: precision = Precision::kDouble; break;
-                                        default: std::unreachable();
-                                    }
-                                    builder.add(std::make_unique<FLoad>(precision, std::move(dst), std::move(src)));
-                                    break;
-                                }
-
-                                default: std::unreachable();
+                        switch (physReg->kind()) {
+                            case RegisterKind::kInteger: {
+                                int width = slot->size();
+                                ExtensionMode extensionMode = width == 8 ? ExtensionMode::kNo : ExtensionMode::kSign;
+                                builder.add(std::make_unique<Load>(width, std::move(dst), std::move(src), extensionMode));
+                                break;
                             }
-                        },
-                        [endSlot = &F.stackFrame().back()](PhysicalRegister *physReg, StackSlot *slot, const BasicBlockBuilder &builder) {
-                            MemoryOperand dst(share(*fp()), std::make_unique<StackRelativeOffsetImmediate>(endSlot, slot));
-                            std::shared_ptr<Register> src = share(*physReg);
 
-                            switch (physReg->kind()) {
-                                case RegisterKind::kInteger: {
-                                    int width = slot->size();
-                                    builder.add(std::make_unique<Store>(width, std::move(dst), std::move(src)));
-                                    break;
+                            case RegisterKind::kFloating: {
+                                Precision precision;
+                                switch (slot->size()) {
+                                    case 4: precision = Precision::kSingle; break;
+                                    case 8: precision = Precision::kDouble; break;
+                                    default: std::unreachable();
                                 }
-
-                                case RegisterKind::kFloating: {
-                                    Precision precision;
-                                    switch (slot->size()) {
-                                        case 4: precision = Precision::kSingle; break;
-                                        case 8: precision = Precision::kDouble; break;
-                                        default: std::unreachable();
-                                    }
-                                    builder.add(std::make_unique<FStore>(precision, std::move(dst), std::move(src)));
-                                    break;
-                                }
-
-                                default: std::unreachable();
+                                builder.add(std::make_unique<FLoad>(precision, std::move(dst), std::move(src)));
+                                break;
                             }
+
+                            default: std::unreachable();
                         }
-                    );
+                    };
+
+                    auto store = [endSlot = &F.stackFrame().back()](PhysicalRegister *physReg, StackSlot *slot, const BasicBlockBuilder &builder) {
+                        MemoryOperand dst(share(*fp()), std::make_unique<StackRelativeOffsetImmediate>(endSlot, slot));
+                        std::shared_ptr<Register> src = share(*physReg);
+
+                        switch (physReg->kind()) {
+                            case RegisterKind::kInteger: {
+                                int width = slot->size();
+                                builder.add(std::make_unique<Store>(width, std::move(dst), std::move(src)));
+                                break;
+                            }
+
+                            case RegisterKind::kFloating: {
+                                Precision precision;
+                                switch (slot->size()) {
+                                    case 4: precision = Precision::kSingle; break;
+                                    case 8: precision = Precision::kDouble; break;
+                                    default: std::unreachable();
+                                }
+                                builder.add(std::make_unique<FStore>(precision, std::move(dst), std::move(src)));
+                                break;
+                            }
+
+                            default: std::unreachable();
+                        }
+                    };
+
+                    try {
+                        LinearScanAllocator allocator;
+                        allocator.allocate(F, 8, virtRegs, physRegs, load, store);
+                    } catch (const RegisterAllocationException &) {
+                        NaiveAllocator allocator;
+                        allocator.allocate(F, 8, virtRegs, physRegs, load, store);
+                    }
                 }
 
                 std::unordered_set<PhysicalRegister *> save;

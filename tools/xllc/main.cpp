@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "codegen/register_allocator/LinearScanAllocator.h"
 #include "ir/Module.h"
 #include "ir_parser/ir_parser.h"
 #include "ir_parser/Lexer.h"
@@ -178,12 +177,10 @@ int main(int argc, char *argv[]) {
 #endif
     passManager.run(M);
 
-    LinearScanAllocator registerAllocator;
     mc::Program program;
 
     if (options.target == Target::kRISCV64) {
         RISCVBackendDriver backendDriver;
-        backendDriver.setRegisterAllocator(&registerAllocator);
         program = backendDriver.run(M);
     }
 
