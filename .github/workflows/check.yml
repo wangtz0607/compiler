@@ -21,6 +21,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: |
-          shopt -s globstar
-          python3 contrib/format.py **/*.cpp **/*.h
-          git diff --exit-code
+          find . \( -name '*.cpp' -o -name '*.h' \) -not -path './third_party/*' | xargs python3 contrib/format.py --check

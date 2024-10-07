@@ -1,3 +1,4 @@
+import argparse
 import re
 import sys
 
@@ -36,7 +37,7 @@ def sort_includes(source):
     return '\n'.join(lines)
 
 
-def format(source):
+def reformat(source):
     source = convert_line_endings(source)
     source = expand_tabs(source)
     source = trim_trailing_whitespaces(source)
@@ -46,14 +47,27 @@ def format(source):
 
 
 def main():
-    for path in sys.argv[1:]:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input', nargs='+')
+    parser.add_argument('--check', action='store_true')
+
+    args = parser.parse_args()
+    exit_code = 0
+
+    for path in args.input:
         with open(path, mode='r', encoding='utf-8') as file:
             source = file.read()
-        formatted_source = format(source)
-        if formatted_source != source:
-            with open(path, mode='w', encoding='utf-8') as file:
-                file.write(formatted_source)
+        reformatted_source = reformat(source)
+        if reformatted_source != source:
+            if args.check:
+                print(path)
+                exit_code = 1
+            else:
+                with open(path, mode='w', encoding='utf-8') as file:
+                    file.write(reformatted_source)
+
+    return exit_code
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
