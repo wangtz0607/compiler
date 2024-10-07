@@ -1,3 +1,4 @@
+import re
 import sys
 
 
@@ -28,7 +29,7 @@ def sort_includes(source):
                 j += 1
             lines[i : j + 1] = sorted(
                 lines[i : j + 1],
-                key=lambda line: line.removeprefix('#include').strip(' <>"').lower(),
+                key=lambda line: re.search(r'<(.*)>|"(.*)"', line).group().lower(),
             )
             i = j
         i += 1
