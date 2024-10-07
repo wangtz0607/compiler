@@ -21,4 +21,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: |
-          find . \( -name '*.cpp' -o -name '*.h' \) -not -path './third_party/*' | xargs python3 contrib/format.py --check
+          find . \( -name '*.cpp' -o -name '*.h' \) -not -path './third_party/*' | xargs ./contrib/format.sh --check
