@@ -20,5 +20,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: |
-          find . \( -name '*.cpp' -o -name '*.h' \) -not -path './third_party/*' | xargs ./contrib/format.sh --check
+      - run: ./contrib/format-all.sh --check
