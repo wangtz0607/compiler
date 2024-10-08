@@ -20,6 +20,9 @@ def trim_final_newlines(source):
 
 
 def sort_includes(source):
+    def key(line):
+        return re.search(r'<(.*)>|"(.*)"', line).group().lower()
+
     lines = source.split('\n')
     n = len(lines)
     i = 0
@@ -28,10 +31,7 @@ def sort_includes(source):
             j = i
             while j + 1 < n and lines[j + 1].startswith('#include'):
                 j += 1
-            lines[i : j + 1] = sorted(
-                lines[i : j + 1],
-                key=lambda line: re.search(r'<(.*)>|"(.*)"', line).group().lower(),
-            )
+            lines[i : j + 1] = sorted(lines[i : j + 1], key=key)
             i = j
         i += 1
     return '\n'.join(lines)
